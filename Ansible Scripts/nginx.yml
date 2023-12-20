@@ -1,0 +1,46 @@
+---
+#Sean Carroll src4413@rit.edu
+#9/12/23
+
+ - name: "Nginx and Change index.html"
+   hosts: all
+   become: yes #need this to become root user
+
+   tasks:
+    - name: "Update apt and install nginx"
+      apt:
+       name: nginx
+       update_cache: yes #equivalent of apt update
+       state: latest #if nginx is already installed, get the latest version
+
+    - name: "Start nginx"
+      service:
+       name: nginx
+       state: started #start nginx service if its not already
+       enabled: yes #enable nginx to start on boot
+       
+    - name: "Install UFW"
+      apt:
+       name: ufw
+       update_cache: yes #equivalent of apt update
+       state: latest #if ufw is already installed, get the lateset version
+
+    - name: "Start UFW and allow http traffic"
+      ufw:
+       state: enabled
+       rule: allow
+       port: '80'
+
+    - name: "Update default index.html"
+      copy:
+       content: "<html><body><h1>This is my web server</h1></body></html>" #edit the default index.html file to serve a different web page
+       dest: /var/www/html/index.html
+      notify:
+       - Restart Nginx #restart the service so that the new web page is displayed
+    
+   handlers:
+    - name: Restart Nginx
+      service:
+       name: nginx
+       state: restarted
+

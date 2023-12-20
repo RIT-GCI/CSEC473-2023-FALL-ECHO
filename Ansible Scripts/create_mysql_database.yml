@@ -1,0 +1,73 @@
+---
+- name: Install MySQL and Create a Database with a Table
+  hosts: localhost
+  become: yes
+  vars:
+    mysql_root_password: root
+    mysql_db_name: initDB
+    mysql_db_user: user
+    mysql_db_password: pass
+    sql_query: sql_table.sql
+    destination: /home/ubuntu/Desktop
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Python MySQL client library
+      apt:
+        name:
+          - python3-pymysql
+        state: present
+
+    - name: Install MySQL server packages
+      apt:
+        name:
+          - default-mysql-server
+          - default-mysql-client
+        state: present
+
+    - name: Start MySQL service
+      service:
+        name: mysql
+        state: started
+
+    - name: Secure MySQL installation
+      mysql_user:
+        name: root
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        password: "{{ mysql_root_password }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      register: mysql_secure_result
+
+    - name: Create a MySQL database
+      mysql_db:
+        name: "{{ mysql_db_name }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Create a MySQL user
+      mysql_user:
+        name: "{{ mysql_db_user }}"
+        password: "{{ mysql_db_password }}"
+        priv: "{{ mysql_db_name }}.*:ALL"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Copy over SQL Query
+      copy:
+        src: "{{ sql_query }}"
+        dest: "{{ destination }}"
+
+    - name: Create a sample table
+      ansible.builtin.mysql_db:
+        name: "{{ mysql_db_name }}"
+        state: import
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        login_host: localhost
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        target: /home/ubuntu/Desktop/sql_table.sql

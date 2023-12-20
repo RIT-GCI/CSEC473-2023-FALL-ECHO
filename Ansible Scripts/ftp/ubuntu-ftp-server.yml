@@ -1,0 +1,58 @@
+---
+- name: Deploy FTP Server
+  hosts: target
+  vars:
+    gray_username: gray_admin
+    gray_password: password
+
+    blue_username: blue_admin
+    blue_password: password
+
+    ftp_username: ftp_user
+    ftp_password: password
+
+  tasks:
+    - name: Create Gray Team Account
+      user:
+        name: {{ gray_username }}
+        password: {{ gray_password }}
+        groups: sudo
+        state: present
+        createhome: yes
+
+    - name: Create Blue Team Account
+      user:
+        name: {{ blue_username }}
+        password: {{ blue_password }}
+        groups: sudo
+        state: present
+        createhome: yes
+
+    - name: Create FTP User Account
+      user:
+        name: {{ ftp_username }}
+        password: {{ ftp_password }}
+        state: present
+        createhome: yes
+
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+
+    - name: Install vsftpd
+      apt:
+        name: vsftpd
+        state: present
+
+    - name: Configure vsftpd
+      template:
+        src: vsftpd.conf.j2
+        dest: /etc/vsftpd.conf
+      notify: Restart vsftpd
+
+    - name: Ensure vsftpd service is enabled and running
+      service:
+        name: vsftpd
+        enabled: yes
+        state: started
+

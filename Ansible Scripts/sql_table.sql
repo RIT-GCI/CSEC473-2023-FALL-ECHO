@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS $table_sql_pass$ (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS jerrys_table (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    $we_out_here$ VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS table_with_important_data (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL
+);

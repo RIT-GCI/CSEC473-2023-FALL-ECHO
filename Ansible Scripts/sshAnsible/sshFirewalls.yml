@@ -1,0 +1,49 @@
+---
+# This playbook allows the machine to only allow SSH traffic (incoming and outgoing)
+# Author: Travis Hill
+# Email: twh9811@rit.edu
+# Date: 9/9/23
+- name: UFW Firewall Rules
+  hosts: servers
+  # Run tasks as sudo. Use -K argument when running with ansible-playbook.
+  become: yes
+  tasks:
+  # Install UFW if it is not already
+  - name: Install UFW
+    ansible.builtin.apt:
+      name: ufw
+      state: present
+
+  - name: Enable UFW with default deny all
+    community.general.ufw:
+      # Reloads firewall and enables firewall when run
+      state: enabled
+      # Default policy is to deny all traffic
+      policy: deny
+
+  - name: Allow Outbound OpenSSH connections
+    community.general.ufw:
+      # Allows traffic through firewall
+      rule: allow
+      # Based on SSH profile data in /etc/ufw/applications.d
+      name: OpenSSH
+      # Outbound allows this machine to SSH into others
+      direction: out
+      
+  - name: Allow Inbound OpenSSH connections
+    community.general.ufw:
+      # Allows traffic through firewall
+      rule: allow
+      # Based on SSH profile data in /etc/ufw/applications.d
+      name: OpenSSH
+      # Inbound allows this machine to be SSHed into by others
+      direction: in
+ 
+  - name: Limit login attempts via SSH
+    community.general.ufw:
+      # Restricts amount of attempts to prevent brute forcing
+      rule: limit
+      # For ssh connections
+      port: ssh
+      # TCP is what SSH usually uses for SSH sessions
+      proto: tcp

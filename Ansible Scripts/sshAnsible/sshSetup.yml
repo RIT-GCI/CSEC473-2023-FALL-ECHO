@@ -1,0 +1,76 @@
+# This playbook ensures the SSH server and SSH client are installed on the machine and configured for use.
+# Author: Travis Hill
+# Email: twh9811@rit.edu
+# Date: 9/9/23
+- name: SSH Initial Setup
+  # Change this to match whatever hosts you want this run on.
+  hosts: servers
+  vars:
+    # Change this to match the user you want to configure an SSH connection for.
+    username: test2
+  # Run tasks as sudo. Use -K argument when running with ansible-playbook.
+  become: yes
+  tasks:
+    - name: Update Available Packages
+      # Essentially runs "apt-get update" using apt module
+      ansible.builtin.apt:
+        update_cache: yes
+    
+    # Installs openssh-server on the host machine if it isn't already installed
+    - name: Install OpenSSH Server (For Incoming Connections)
+      ansible.builtin.apt:
+        name: openssh-server
+        state: present
+        
+    # Installs openssh-client on the host machine if it isn't already installed   
+    - name: Install OpenSSH Client (For Outgoing Connections)
+      ansible.builtin.apt:
+        name: openssh-client
+        state: present
+        
+    # Sometimes the .ssh directory is not present for the user specified, so we have to create that to ensure proper configuration with the proper permissions
+    - name: Create .ssh directory if it is not present
+      file:
+        path: /home/{{ username }}/.ssh
+        state: directory
+        owner: '{{ username }}'
+        group: '{{ username }}'
+        mode: '700'
+        
+    # Generates a public-private keypair called id_rsa and stores it in the users .ssh/id_rsa directory, it's perms being set to the user specified 
+    - name: Generate SSH for Remote Client
+      community.crypto.openssh_keypair:
+        path: /home/{{ username }}/.ssh/id_rsa
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        
+    # Associates the previously generated public key with the specified user.
+    - name: Set SSH Key for Remote Client
+      ansible.posix.authorized_key:
+        user: "{{ username }}"
+        state: present
+        # Have to use lookup here so it searches the remote target file system rather than the local one on the host machine.
+        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+        
+    # Doesn't allow the root user to SSH into other machines by finding the PermitRootLogin variable in sshd_config and changing it to be set to no
+    - name: Deny Root Account Access to SSH
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        state: present
+        regexp: '^#PermitRootLogin'
+        line: PermitRootLogin no
+        
+    # Only allows users to connect via SSH keys by finding the PasswordAuthentication variable in sshd_config and changing it to be set to no   
+    - name: Remove Password Authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        state: present
+        regexp: '^#PasswordAuthentication'
+        line: PasswordAuthentication no 
+   
+    # Restarts SSH service to apply changes and makes sure it starts on boot still  
+    - name: Restart SSH to apply changes
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+        enabled: true
